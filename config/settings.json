@@ -3,23 +3,14 @@
     "hostname": "192.168.173.10",
     "port": 1883,
     "username": "mqttuser",
-    "password": "tina0110"
+    "password": "*********"
   },
   "clientname": "mqttadaptor",
-  "subscribe": [
-    ["/Haus/Stromzaehler/Power/L1/", 0],
-    ["/Haus/Meter/", 0],
-    ["/home/bedroom/switch1/", 0],
-    ["/home/steckerleiste/", 0]
-  ],
   "items": [
     {
       "name": "testitem1",
       "device": "testdevice",
-      "subscribe": [
-        ["/Haus/Meter/", 0],
-        ["/home/bedroom/switch1/", 0]
-      ],
+      "subscribe": "/Haus/Meter/, 0",
       "topic": "/Haus/Meter/",
       "config": {}
     },

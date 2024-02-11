@@ -26,6 +26,22 @@ def import_device(name):
   finally:
     pass
 
+def formatsc(subcribtion):
+  if type(subcribtion) is list:
+    if type(subcribtion[0]) is list:
+      return subcribtion
+    if len(subcribtion) == 2:
+      return [subcribtion]
+  elif type(subcribtion) is str:
+    parts = subcribtion.replace(' ','').split(',')
+    if len(parts) == 1:
+      parts.append(0)
+    if len(parts) == 2:
+      parts[1] = int(parts[1])
+      return [parts]
+  print("Unabel to interpret subscription.")
+  return []
+
 def on_connect(client, userdata, flags, return_code):
   if return_code == 0:
     print("connected")
@@ -58,8 +74,9 @@ if "broker" in CONFIG:
     internal["subscribtions"] = {}
     for item in CONFIG["items"]:
       internal["items"][item["name"]] = import_device(item["device"]).device(item["config"], item["topic"], client.publish)
-      internal["subscribe"] += item["subscribe"]
-      for subscribtion in item["subscribe"]:
+      subscribe = formatsc(item["subscribe"])
+      internal["subscribe"] += subscribe
+      for subscribtion in subscribe:
         if subscribtion[0] in internal["subscribtions"]:
           if item["name"] not in internal["subscribtions"][subscribtion[0]]:
             internal["subscribtions"][subscribtion[0]].appand(item["name"])
