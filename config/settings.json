@@ -1,9 +1,9 @@
 {
-  "broker":{
+  "broker": {
     "hostname": "192.168.173.10",
     "port": 1883,
     "username": "mqttuser",
-    "password": "********"
+    "password": "tina0110"
   },
   "clientname": "mqttadaptor",
   "subscribe": [
@@ -11,5 +11,27 @@
     ["/Haus/Meter/", 0],
     ["/home/bedroom/switch1/", 0],
     ["/home/steckerleiste/", 0]
+  ],
+  "items": [
+    {
+      "name": "testitem1",
+      "device": "testdevice",
+      "subscribe": [
+        ["/Haus/Meter/", 0],
+        ["/home/bedroom/switch1/", 0]
+      ],
+      "topic": "/Haus/Meter/",
+      "config": {}
+    },
+    {
+      "name": "testitem2",
+      "device": "testdevice",
+      "subscribe": [
+        ["/Haus/Stromzaehler/Power/L1/", 0],
+        ["/home/steckerleiste/", 0]
+      ],
+      "topic": "/Haus/Stromzaehler/Power/L1/",
+      "config": {}
+    }    
   ]
 }

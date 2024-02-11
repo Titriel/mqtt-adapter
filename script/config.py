@@ -1,9 +1,9 @@
 import json
-from os import path, environ
+from os import path, getcwd, environ
 
 def config():
   CONFIG = {} 
-  tempfile = "config/settings.json"
+  tempfile = path.join(getcwd(),"config", "settings.json")
   if path.exists(tempfile):
     with open(tempfile,'r') as file:
       CONFIG = json.load(file)
