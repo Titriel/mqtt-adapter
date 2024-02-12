@@ -23,6 +23,9 @@
       ],
       "topic": "/Haus/Stromzaehler/Power/L1/",
       "config": {}
+    },
+    {
+      "name": "testitem3"
     }    
   ]
 }

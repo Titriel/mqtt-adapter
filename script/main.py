@@ -3,6 +3,9 @@ from os import path, getcwd
 from sys import modules as devlib
 from importlib.machinery import SourceFileLoader
 from importlib.util import spec_from_loader, module_from_spec
+from types import ModuleType
+from typing import Any, Union
+from json import load
 from threading import Thread
 from time import sleep
 from config import config
@@ -10,7 +13,19 @@ from config import config
 internal = {"command": "", "worker": {}}
 CONFIG = config()
 
-def import_device(name):
+def import_device(name: str) -> ModuleType:
+  """
+  Imports or get the divice module by the name.
+  - The module must be in ./devices/<name>/main.py.
+  - The name is also taken for register the module by this name.
+  - The divice module will be also executed by loading the first time.
+
+  Args:
+    name (str): Divice module name and the folder name where the main.py of the divice module is placed.
+
+  Returns:
+    ModuleType: The requested device module
+  """
   try:
     return devlib[name]
   except KeyError:
@@ -26,7 +41,16 @@ def import_device(name):
   finally:
     pass
 
-def formatsc(subcribtion):
+def formatsc(subcribtion: Union[str, list]) -> list:
+  """
+  Normalize a subcribtion.
+
+  Args:
+    subcribtion (str, list): e.g. "/home/myitem/, 0" or ["/home/myitem/", 0] or [[...], [...]]
+
+  Returns:
+    list: A list of lists of subcribtions e.g. [["/home/myitem/", 0], [...]]
+  """
   if type(subcribtion) is list:
     if type(subcribtion[0]) is list:
       return subcribtion
@@ -62,7 +86,7 @@ def on_message(client, userdata, message):
 if "clientname" in CONFIG:
   internal["clientname"] = CONFIG["clientname"]
 else:
-  internal["clientname"] = "default"
+  internal["clientname"] = "clientadapter"
 client = mqtt.Client(internal["clientname"])
 if "broker" in CONFIG:
   if ("username" in CONFIG["broker"]) and ("password" in CONFIG["broker"]):
@@ -73,13 +97,19 @@ if "broker" in CONFIG:
     internal["items"] = {}
     internal["subscribtions"] = {}
     for item in CONFIG["items"]:
+      if "config" not in item:
+          tempfile = path.join(getcwd(),"config", item["name"] + ".json")
+          if path.exists(tempfile):
+            with open(tempfile,'r') as file:
+              item = load(file)
       internal["items"][item["name"]] = import_device(item["device"]).device(item["config"], item["topic"], client.publish)
       subscribe = formatsc(item["subscribe"])
-      internal["subscribe"] += subscribe
+      internal["subscribe"] += [v for v in subscribe if v not in internal["subscribe"]]
+      #internal["subscribe"] = dict.fromkeys(internal["subscribe"] + subscribe)
       for subscribtion in subscribe:
         if subscribtion[0] in internal["subscribtions"]:
           if item["name"] not in internal["subscribtions"][subscribtion[0]]:
-            internal["subscribtions"][subscribtion[0]].appand(item["name"])
+            internal["subscribtions"][subscribtion[0]].append(item["name"])
         else:
           internal["subscribtions"][subscribtion[0]] = [item["name"]]
   else:
