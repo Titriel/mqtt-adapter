@@ -1,3 +1,5 @@
+import logging
+from logsetup import d2s, pretty
 import paho.mqtt.client as mqtt
 from os import path, getcwd
 from sys import modules as devlib
@@ -10,8 +12,8 @@ from threading import Thread
 from time import sleep
 from config import config
 
-internal = {"command": "", "worker": {}}
-CONFIG = config()
+logger = logging.getLogger()
+pretty()
 
 def import_device(name: str) -> ModuleType:
   """
@@ -30,7 +32,7 @@ def import_device(name: str) -> ModuleType:
     return devlib[name]
   except KeyError:
     pass
-  print(path.join(getcwd(),"devices", name, "main.py"))
+  logger.info("Import device: %s", path.join(getcwd(),"devices", name, "main.py"))
   loader = SourceFileLoader(name, path.join(getcwd(),"devices", name, "main.py"))
   spec = spec_from_loader(name, loader)
   try:
@@ -63,15 +65,15 @@ def formatsc(subcribtion: Union[str, list]) -> list:
     if len(parts) == 2:
       parts[1] = int(parts[1])
       return [parts]
-  print("Unabel to interpret subscription.")
+  logger.warning("Unabel to interpret subscription: %s", d2s(subcribtion))
   return []
 
-def on_connect(client, userdata, flags, return_code):
-  if return_code == 0:
-    print("connected")
+def on_connect(client, userdata, flags, reason_code, properties):
+  if reason_code == 0:
+    logger.info("Connected to broker %s:%s", CONFIG["broker"]["hostname"], CONFIG["broker"]["port"])
     client.subscribe(internal["subscribe"])        
   else:
-    print("could not connect, return code:", return_code)
+    logger.error("Could not connect, return code: %s", str(reason_code))
     client.failed_connect = True
 
 def on_command(client, userdata, message):
@@ -83,78 +85,90 @@ def on_message(client, userdata, message):
       temp = Thread(target=internal["items"][name].on_massage, args=(message.topic, str(message.payload.decode("utf-8")), message.retain))
       temp.start()
 
-if "clientname" in CONFIG:
-  internal["clientname"] = CONFIG["clientname"]
-else:
-  internal["clientname"] = "clientadapter"
-client = mqtt.Client(internal["clientname"])
-if "broker" in CONFIG:
-  if ("username" in CONFIG["broker"]) and ("password" in CONFIG["broker"]):
-    client.username_pw_set(username=CONFIG["broker"]["username"], password=CONFIG["broker"]["password"])
+internal = {"command": "", "worker": {}}
+while "clientname" not in internal:
+  CONFIG = config()      
 
-  if "items" in CONFIG:
-    internal["subscribe"] = [["/adapter/" + internal["clientname"] + "/command/", 0]]
-    internal["items"] = {}
-    internal["subscribtions"] = {}
+  if "clientname" in CONFIG:
+    internal["clientname"] = CONFIG["clientname"]
+  else:
+    internal["clientname"] = "clientadapter"
+  client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, internal["clientname"])
+  if "broker" in CONFIG:
+    if ("username" in CONFIG["broker"]) and ("password" in CONFIG["broker"]):
+      client.username_pw_set(username=CONFIG["broker"]["username"], password=CONFIG["broker"]["password"])
+
+    if "items" in CONFIG:
+      internal["subscribe"] = [["/adapter/" + internal["clientname"] + "/command/", 0]]
+      internal["items"] = {}
+      internal["subscribtions"] = {}
+      for item in CONFIG["items"]:
+        if "config" not in item:
+            tempfile = path.join(getcwd(),"config", item["name"] + ".json")
+            if path.exists(tempfile):
+              with open(tempfile,'r') as file:
+                item = load(file)
+        internal["items"][item["name"]] = import_device(item["device"]).device(item["config"], item["topic"], client.publish)
+        subscribe = formatsc(item["subscribe"])
+        internal["subscribe"] += [v for v in subscribe if v not in internal["subscribe"]]
+        #internal["subscribe"] = dict.fromkeys(internal["subscribe"] + subscribe)
+        for subscribtion in subscribe:
+          if subscribtion[0] in internal["subscribtions"]:
+            if item["name"] not in internal["subscribtions"][subscribtion[0]]:
+              internal["subscribtions"][subscribtion[0]].append(item["name"])
+          else:
+            internal["subscribtions"][subscribtion[0]] = [item["name"]]
+    else:
+      logger.error("No items are defined in settings.json")
+      exit    
+
+    if "hostname" in CONFIG["broker"]:
+      client.connect(CONFIG["broker"]["hostname"], CONFIG["broker"]["port"])
+      logger.info("Connecting with %s:%s", CONFIG["broker"]["hostname"], CONFIG["broker"]["port"])
+    else:
+      logger.error("No broker hostname is defined in settings.json")
+      exit
+
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.message_callback_add(internal["subscribe"][0][0], on_command)
+    client.failed_connect = False
+
     for item in CONFIG["items"]:
-      if "config" not in item:
-          tempfile = path.join(getcwd(),"config", item["name"] + ".json")
-          if path.exists(tempfile):
-            with open(tempfile,'r') as file:
-              item = load(file)
-      internal["items"][item["name"]] = import_device(item["device"]).device(item["config"], item["topic"], client.publish)
-      subscribe = formatsc(item["subscribe"])
-      internal["subscribe"] += [v for v in subscribe if v not in internal["subscribe"]]
-      #internal["subscribe"] = dict.fromkeys(internal["subscribe"] + subscribe)
-      for subscribtion in subscribe:
-        if subscribtion[0] in internal["subscribtions"]:
-          if item["name"] not in internal["subscribtions"][subscribtion[0]]:
-            internal["subscribtions"][subscribtion[0]].append(item["name"])
-        else:
-          internal["subscribtions"][subscribtion[0]] = [item["name"]]
-  else:
-    print("Es sind keine Items configuriert")
-    exit    
+      if not internal["items"][item["name"]].workerrunning:
+        internal["worker"][item["name"]] = Thread(target=internal["items"][item["name"]].worker)
+        internal["items"][item["name"]].workerrunning = True
+        internal["worker"][item["name"]].start()
 
-  if "hostname" in CONFIG["broker"]:
-    client.connect(CONFIG["broker"]["hostname"])
+    client.loop_start()
   else:
-    print("Es wurde kein Hostname für den Broker angegeben")
+    logger.error("No broker is defined in settings.json")
     exit
 
-  client.on_connect = on_connect
-  client.on_message = on_message
-  client.message_callback_add(internal["subscribe"][0][0], on_command)
-  client.failed_connect = False
-
-  for item in CONFIG["items"]:
-    if not internal["items"][item["name"]].workerrunning:
-      internal["worker"][item["name"]] = Thread(target=internal["items"][item["name"]].worker)
-      internal["items"][item["name"]].workerrunning = True
-      internal["worker"][item["name"]].start()
-
-  client.loop_start()
-else:
-  print("Es wurde kein Broker angegeben")
-  exit
-
-try:
-  while (internal["command"] != "stop") and client.failed_connect == False:
-    if internal["command"] == "ON":
-      result = client.publish("/home/steckerleiste/", '{"Plug1":"ON", "Plug2":"ON"}')
-      internal["command"] = ""
-    if internal["command"] == "OFF":
-      result = client.publish("/home/steckerleiste/", '{"Plug1":"OFF", "Plug2":"OFF"}')
-      internal["command"] = ""      
-    sleep(1)
-  if client.failed_connect == True:
-    print('Connection failed, exiting...')
-  elif internal["command"] == "stop":
-    print('Connection disconect by stop command')    
-finally:
-  for item in internal["worker"]:
-    internal["items"][item].workerrunning = False   
-  client.disconnect()
-  client.loop_stop() 
-  for item in internal["worker"]:
-    internal["worker"][item].join()
+  loopcount = 1000
+  try:
+    while (internal["command"] != "stop") and (internal["command"] != "reini") and (client.failed_connect == False):
+      if loopcount > 120:
+        loopcount = 0
+        client.publish("/adapter/" + internal["clientname"] + "/status/", 'running')
+      loopcount += 1       
+      sleep(1)
+      logger.handlers[0].flush()
+    if client.failed_connect == True:
+      logger.error("Connection failed, exiting...")
+    elif internal["command"] == "stop":
+      client.publish("/adapter/" + internal["clientname"] + "/status/", 'stopping')
+      logger.info("Connection disconect by stop command.")
+    elif internal["command"] == "reini":
+      client.publish("/adapter/" + internal["clientname"] + "/status/", 'stopping')
+      logger.info("Connection disconect by reini command.")      
+  finally:
+    for item in internal["worker"]:
+      internal["items"][item].workerrunning = False   
+    client.disconnect()
+    client.loop_stop() 
+    for item in internal["worker"]:
+      internal["worker"][item].join()
+      del internal["items"][item]
+    if internal["command"] == "reini":
+      internal = {"command": "", "worker": {}}
