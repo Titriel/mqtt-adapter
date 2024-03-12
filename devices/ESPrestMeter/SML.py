@@ -301,10 +301,12 @@ def calcflat(data, names):
         temp = str(d['value'])
         if d['scaler'] < 0:
           temp = temp[:d['scaler']] + ',' + temp[d['scaler']:]
+          ddec = round(d['value'] * pow(10, d['scaler']), - d['scaler'])
         else:
           temp += '0' * d['scaler']
+          ddec = d['value'] * pow(10, d['scaler']) 
         temp += ' ' + SMLtable['unit'][d['unit']]
-        res.append({key: {"hr": temp, "value": d['value'] * pow(10, d['scaler']), "unit": SMLtable['unit'][d['unit']]}})
+        res.append({key: {"hr": temp, "value": ddec, "unit": SMLtable['unit'][d['unit']]}})
   elif names == 'getListResponse':
     res.append({'actSensorTime': {"hr": datetime.fromtimestamp(data['actSensorTime']['secIndex'] + SMLtable['timeoffset'][data['serverID']]),
                                   "raw": data['actSensorTime']['secIndex'], "offset": SMLtable['timeoffset'][data['serverID']]}})

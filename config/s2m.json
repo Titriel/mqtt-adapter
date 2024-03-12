@@ -1,0 +1,12 @@
+{
+  "name": "s2m",
+  "device": "Meter2Maria",
+  "subscribe": "/Test/Meter/, 0",
+  "topic": "/Test/Meter/",
+  "config": {
+    "host": "192.168.173.9",
+    "user": "meter",
+    "password": "********",
+    "database": "Haus"
+  }
+}

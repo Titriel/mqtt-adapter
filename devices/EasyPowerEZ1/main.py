@@ -39,7 +39,7 @@ class device:
           logger.info("EZ1 on %s:%s is not reatchabel.", self.c["ip"], self.c["port"])
       if responce is not None:
         res = responce.json()
-        if res['message'] == 'SUCCESS':
+        if res is not None and 'message' in res and (res['message'] == 'SUCCESS'):
           res['data']['online'] = True
           res['data']['deviceId'] = res['deviceId']
           self.publisher(self.topic, dumps(res['data']))
