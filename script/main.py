@@ -82,10 +82,13 @@ def on_command(client, userdata, message):
 def on_message(client, userdata, message):
   if message.topic in internal["subscribtions"]:
     for name in internal["subscribtions"][message.topic]:
-      temp = Thread(target=internal["items"][name].on_massage, args=(message.topic, str(message.payload.decode("utf-8")), message.retain))
-      temp.start()
+      if (name in internal["massageh"]) and internal["massageh"][name].is_alive():
+        logger.warning("Skip massage to %s, its massagehandler is still working.\n%s", name, str(message.payload.decode("utf-8")))
+      else:
+        internal["massageh"][name] = Thread(target=internal["items"][name].on_massage, args=(message.topic, str(message.payload.decode("utf-8")), message.retain))
+        internal["massageh"][name].start()
 
-internal = {"command": "", "worker": {}}
+internal = {"command": "", "worker": {}, "massageh": {}}
 while "clientname" not in internal:
   CONFIG = config()      
 
@@ -151,9 +154,10 @@ while "clientname" not in internal:
       if loopcount > 120:
         loopcount = 0
         client.publish("/adapter/" + internal["clientname"] + "/status/", 'running')
-      loopcount += 1       
+      loopcount += 1        
       sleep(1)
       logger.handlers[0].flush()
+
     if client.failed_connect == True:
       logger.error("Connection failed, exiting...")
     elif internal["command"] == "stop":
@@ -170,5 +174,8 @@ while "clientname" not in internal:
     for item in internal["worker"]:
       internal["worker"][item].join()
       del internal["items"][item]
+    for item in internal["massageh"]:  
+      if internal["massageh"][item].is_alive():
+        internal["massageh"][item].join()
     if internal["command"] == "reini":
-      internal = {"command": "", "worker": {}}
+      internal = {"command": "", "worker": {}, "massageh": {}}

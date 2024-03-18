@@ -16,8 +16,6 @@ class device:
     logger.info("do init the device %s", d2s(config))
 
   def on_massage(self, topic, payload, retain):
-    logger.info("This is my worker %s", self.topic)
-    sleep(2)
     logger.info("Received message for topic %s: %s", topic, payload)
     if retain==1:
       logger.info("This is a retained message")
