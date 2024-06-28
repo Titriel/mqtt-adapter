@@ -23,17 +23,32 @@ class device:
   def __init__(self, config, topic, publisher):
     self.topic = topic
     self.publisher = publisher
+    self.buffer = []
     self.workerrunning = False
     self.syncmetertime = False
     self.c = config
     self.day = date.today() - timedelta(days = 2)
     logger.info("do init the device %s", d2s(config))
 
-  def on_massage(self, topic, payload, retain):
-    logger.info("Received message for topic %s: %s", topic, payload)
-    if retain==1:
-      logger.info("This is a retained message")
+  def on_busy(self, topic, payload, retain):
+    self.buffer.append({"topic": topic, "payload": payload, "retain": retain})
 
+  def on_massage(self, topic, payload, retain):
+    if len(self.buffer) > 0:
+      self.buffer.append({"topic": topic, "payload": payload, "retain": retain})    
+    while True:
+      if len(self.buffer) > 0:
+        temp = self.buffer.pop(0)
+        topic = temp["topic"]
+        payload = temp["payload"]
+        retain = temp["retain"]
+
+      logger.info("Received message for topic %s: %s", topic, payload)
+      if retain==1:
+        logger.info("This is a retained message")
+      if len(self.buffer) == 0:
+        return
+      
   def worker(self):
     logger.info("This is my worker %s", self.topic)
     ESPmeter = ESPrest.set(self.c["ip"], self.c["token"])
@@ -99,14 +114,14 @@ def mkreadyformeter(ESPmeter, baudrate, loopback=False):
     if not ESPmeter.focall('serial', 'PATCH', {"move": "swap"}):
       return False
     res = True
-  if not ESPmeter.responce.json()["Serial1"]["enabeled"] and not ESPmeter.responce.json()["GPIO2used"]:
+  if not ESPmeter.responce.json()["Serial1"]["enabeled"] and not ESPmeter.responce.json()["GPIO2used"]: # enabeled zu enabled nach ESP-Update
     if not ESPmeter.focall('serial', 'PATCH', Ser1set):
       return False
     if ESPmeter.responce.status_code != 201:
       logger.error("Status: %s -> Msg: %s", ESPmeter.responce.status_code, ESPmeter.responce.json()["msg"])
       return False
     res = True
-  elif not ESPmeter.responce.json()["Serial1"]["enabeled"]:
+  elif not ESPmeter.responce.json()["Serial1"]["enabeled"]: # enabeled zu enabled nach ESP-Update
     logger.error("GPIO2 is used by another component.")
     return False
   if (ESPmeter.responce.json()["Serial1"]["baud"] != baudrate) or (ESPmeter.responce.json()["Serial1"]["loopback"] != loopback):

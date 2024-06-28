@@ -9,6 +9,7 @@ from hashlib import md5 as md5byte
 from json import dumps
 from math import floor
 from typing import Any, Union, Literal
+import traceback
 
 logger = logging.getLogger()
 md5 = lambda text:md5byte(text.encode('utf8')).hexdigest()
@@ -115,32 +116,40 @@ class set:
     Returns:
       see in .responce and .isOpen.
       Itself is True if success else is False.
-    """    
-    if self.isOpen:
-      if not self.call(path, methode, content):
-        return False
-      if self.responce.status_code == 401:
+    """
+    try:    
+      if self.isOpen:
+        if not self.call(path, methode, content):
+          return False
+        if self.responce.status_code == 401:
+          if not self.open():
+            return False
+          if self.responce.status_code == 201:
+            if not self.call(path, methode, content):
+              return False
+            if expect is not None and (self.responce.status_code != expect):
+              return False
+          else:
+            logger.warning("Can not open ESP: %s Status: %s", self.responce.json()['msg'], self.responce.status_code)
+            return False
+      else:
         if not self.open():
           return False
         if self.responce.status_code == 201:
           if not self.call(path, methode, content):
             return False
           if expect is not None and (self.responce.status_code != expect):
-            return False
+            return False        
+          self.close()         
         else:
           logger.warning("Can not open ESP: %s Status: %s", self.responce.json()['msg'], self.responce.status_code)
-    else:
-      if not self.open():
-        return False
-      if self.responce.status_code == 201:
-        if not self.call(path, methode, content):
           return False
-        if expect is not None and (self.responce.status_code != expect):
-          return False        
-        self.close()         
-      else:
-        logger.warning("Can not open ESP: %s Status: %s", self.responce.json()['msg'], self.responce.status_code)
-    return True    
+      self.responce.json()
+      return True
+    except Exception as error:
+      logger.warning("Unexpected error %s ocures.", type(error).__name__)
+      traceback.print_exc()
+      return False
 
   def open(self):
     """

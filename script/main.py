@@ -83,9 +83,10 @@ def on_message(client, userdata, message):
   if message.topic in internal["subscribtions"]:
     for name in internal["subscribtions"][message.topic]:
       if (name in internal["massageh"]) and internal["massageh"][name].is_alive():
-        logger.warning("Skip massage to %s, its massagehandler is still working.\n%s", name, str(message.payload.decode("utf-8")))
+        internal["items"][name].on_busy(message.topic, str(message.payload.decode("utf-8")), message.retain)
+        logger.warning("Massage to %s, was bufferd, massagehandler is still working.\n%s", name, str(message.payload.decode("utf-8")))
       else:
-        internal["massageh"][name] = Thread(target=internal["items"][name].on_massage, args=(message.topic, str(message.payload.decode("utf-8")), message.retain))
+        internal["massageh"][name] = Thread(name="Msghandler " + name, target=internal["items"][name].on_massage, args=(message.topic, str(message.payload.decode("utf-8")), message.retain))
         internal["massageh"][name].start()
 
 internal = {"command": "", "worker": {}, "massageh": {}}
@@ -139,7 +140,7 @@ while "clientname" not in internal:
 
     for item in CONFIG["items"]:
       if not internal["items"][item["name"]].workerrunning:
-        internal["worker"][item["name"]] = Thread(target=internal["items"][item["name"]].worker)
+        internal["worker"][item["name"]] = Thread(name="Worker " + item["name"], target=internal["items"][item["name"]].worker)
         internal["items"][item["name"]].workerrunning = True
         internal["worker"][item["name"]].start()
 
@@ -149,6 +150,7 @@ while "clientname" not in internal:
     exit
 
   loopcount = 1000
+
   try:
     while (internal["command"] != "stop") and (internal["command"] != "reini") and (client.failed_connect == False):
       if loopcount > 120:
@@ -156,6 +158,14 @@ while "clientname" not in internal:
         client.publish("/adapter/" + internal["clientname"] + "/status/", 'running')
       loopcount += 1        
       sleep(1)
+      if internal["command"] == "warning":
+        logger.setLevel(logging.WARNING)
+        logger.warning("Loglevel is set to Warning.")
+        internal["command"] = ""
+      elif internal["command"] == "info":
+        logger.setLevel(logging.INFO)
+        logger.info("Loglevel is set to Info.")
+        internal["command"] = ""
       logger.handlers[0].flush()
 
     if client.failed_connect == True:
@@ -165,7 +175,8 @@ while "clientname" not in internal:
       logger.info("Connection disconect by stop command.")
     elif internal["command"] == "reini":
       client.publish("/adapter/" + internal["clientname"] + "/status/", 'stopping')
-      logger.info("Connection disconect by reini command.")      
+      logger.info("Connection disconect by reini command.")
+        
   finally:
     for item in internal["worker"]:
       internal["items"][item].workerrunning = False   

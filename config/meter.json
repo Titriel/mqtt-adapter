@@ -1,0 +1,10 @@
+{
+  "name": "meter",
+  "device": "MeterLimited",
+  "subscribe": "/Haus/Meter/, 0",
+  "topic": "/Haus/SlowMeter/",
+  "config": {
+    "summarize": 5,
+    "topics": ["Total_Power", "Power_L1", "Power_L2", "Power_L3", "Voltage_L1", "Voltage_L2", "Voltage_L3"]
+  }
+}

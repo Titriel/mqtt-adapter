@@ -14,23 +14,38 @@ class device:
   def __init__(self, config, topic, publisher):
     self.topic = topic
     self.publisher = publisher
+    self.buffer = []
     self.workerrunning = False
     self.c = config
     self.url = lambda path:'http://' + self.c["ip"] + ':' + self.c["port"] + '/' + path
     logger.info("do init the device %s", d2s(config))
 
-  def on_massage(self, topic, payload, retain):
-    logger.info("Received message for topic %s: %s", topic, payload)
-    if retain==1:
-      logger.info("This is a retained message")
+  def on_busy(self, topic, payload, retain):
+    self.buffer.append({"topic": topic, "payload": payload, "retain": retain})
 
+  def on_massage(self, topic, payload, retain):
+    if len(self.buffer) > 0:
+      self.buffer.append({"topic": topic, "payload": payload, "retain": retain})    
+    while True:
+      if len(self.buffer) > 0:
+        temp = self.buffer.pop(0)
+        topic = temp["topic"]
+        payload = temp["payload"]
+        retain = temp["retain"]
+
+      logger.info("Received message for topic %s: %s", topic, payload)
+      if retain==1:
+        logger.info("This is a retained message")
+      if len(self.buffer) == 0:
+        return
+      
   def worker(self):
     logger.info("This is my worker %s", self.topic)
     res = {}
     while (self.workerrunning):
       responce = None
       try:
-        responce = get(self.url('getOutputData'))
+        responce = get(self.url('getOutputData'), timeout= int(round(self.c["interval"] / 2)))
       except:
         if 'data' in res:
           res['data']['online'] = False

@@ -5,8 +5,8 @@
   "topic": "/Test/Meter/",
   "config": {
     "host": "192.168.173.9",
-    "user": "meter",
-    "password": "********",
+    "user": "***secret***",
+    "password": "***secret***",
     "database": "Haus"
   }
 }

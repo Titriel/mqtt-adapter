@@ -1,0 +1,41 @@
+{
+  "name": "LC-SS-653-CC-01",
+  "device": "TuyaLocal",
+  "subscribe": "/Haus/Wohnzimmer/TuyaRGB/, 0",
+  "topic": "/Haus/Wohnzimmer/TuyaRGB/",
+  "config": {
+    "devtype": "BulbDevice",
+    "ip": "192.168.173.113",
+    "id": "***secret***",
+    "localKey": "***secret***",
+    "timeout": 3,
+    "retry_limit": 2,
+    "retry_delay": 3,
+    "bulb_type": "B",
+    "dp_map": {
+      "state": ["state", false, "list"],
+      "20": ["is_on", true, "bool"],
+      "21": ["work_mode", false, null],
+      "22": ["bright_value", false, null],
+      "23": ["temp_value", false, null],
+      "24": ["colour", true, "str"],
+      "25": ["scene_data", null, "str"],
+      "26": ["countdown", null, 0],
+      "27": ["music_data", false, null],
+      "28": ["control_data", false, null],
+      "29": ["debug_data", false, null],
+      "30": ["rhythm_mode", false, null],
+      "31": ["sleep_mode", false, null],
+      "32": ["wakeup_mode", false, null],
+      "brightness": ["brightness", true, 0, [10, 1000]],
+      "colourtemp": ["colourtemp", true, 0, [0, 1000]],
+      "brightness_percentage": ["brightness_percentage", true, 0, [0, 100]],
+      "colourtemp_percentage": ["colourtemp_percentage", true, 0, [0, 100]],      
+      "mode": ["mode", true, "enum", "white", "colour", "scene"],
+      "white": ["white", null, "list", [10, 1000], [0, 1000]],
+      "white_percentage": ["white_percentage", null, "list", [0, 100], [0, 100]],      
+      "colour_rgb": ["colour_rgb", null, "list", [0, 255], [0, 255], [0, 255]],
+      "colour_hsv": ["colour_hsv", null, "list", [0, 1], [0, 1], [0, 1]]
+    }
+  }
+}

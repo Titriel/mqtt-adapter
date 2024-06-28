@@ -8,17 +8,15 @@ from copy import deepcopy
 
 conf ={"pretty": False}
 
-LOGGING_FORMAT: str = "%(asctime)s.%(msecs)06d\t%(levelname)s\t%(message)s"
+streamHandler = StreamHandler(stream=stderr)
+
+LOGGING_FORMAT: str = "%(asctime)s.%(msecs)06d\t%(threadName)s\t%(levelname)s\n%(message)s"
 LOGGING_DATEFMT: str = "%Y-%m-%dT%H:%M:%S"
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 formatter = logging.Formatter(
     fmt=LOGGING_FORMAT,
     datefmt=LOGGING_DATEFMT,
-)
-
-streamHandler = StreamHandler(stream=stderr)
+)    
 streamHandler.setFormatter(formatter)
 
 memoryHandler = MemoryHandler(
@@ -26,6 +24,8 @@ memoryHandler = MemoryHandler(
     flushLevel=logging.ERROR,
     target=streamHandler,
 )
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 logger.addHandler(memoryHandler)
 
 def pretty():
