@@ -9,7 +9,6 @@ tinytuya.json
 tuya-raw.json
 devicesorg.json
 myscan.py
-config/*.json
-config/*.bak
+config/
 devices/ESPrestMeter/*.json
 devices/ESPrestMeter/test*.py
