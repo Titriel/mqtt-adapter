@@ -1,0 +1,38 @@
+{
+  "broker": {
+    "hostname": "192.168.173.10",
+    "port": 1883,
+    "username": "devuser",
+    "password": "tina0110"
+  },
+  "clientname": "mqttadapter-dev",
+  "items": [
+    {
+      "name": "EZ1Solar",
+      "device": "EasyPowerEZ1",
+      "subscribe": "/Haus/Solar/EZ1/, 0",
+      "topic": "/Haus/Solar/EZ1/",
+      "config": {"ip": "192.168.173.112", "port": "8050", "interval": 5}
+    },    
+    {
+      "name": "testitem1",
+      "device": "testdevice",
+      "subscribe": "/Haus/Meter/, 0",
+      "topic": "/Haus/Meter/",
+      "config": {}
+    },
+    {
+      "name": "testitem2",
+      "device": "testdevice",
+      "subscribe": [
+        ["/Haus/Stromzaehler/Power/L1/", 0],
+        ["/home/steckerleiste/", 0]
+      ],
+      "topic": "/Haus/Stromzaehler/Power/L1/",
+      "config": {}
+    },
+    {
+      "name": "testitem3"
+    }    
+  ]
+}
