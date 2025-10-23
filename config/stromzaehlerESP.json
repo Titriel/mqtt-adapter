@@ -1,0 +1,14 @@
+{
+  "name": "stromzaehler",
+  "device": "ESPrestMeter",
+  "subscribe": "/Haus/Meter/, 0",
+  "topic": "/Haus/Meter/",
+  "config": {
+    "ip": "192.168.173.163",
+    "token": "***secret@secret***",
+    "sseUser": "***secret***",
+    "ssePass": "***secret***",
+    "ssetimeout": 10,
+    "loopback": false
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "stromzaehler",
+  "device": "TibberLocal",
+  "subscribe": [["/Haus/Meter/", 0], ["/Haus/Meter/status/", 0]],
+  "topic": "/Haus/Meter/",
+  "config": {
+    "ip": "192.168.173.175",
+    "User": "***secret***",
+    "Pass": "***secret***",
+    "node_id": "1"
+  }
+}
