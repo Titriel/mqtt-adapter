@@ -5,8 +5,8 @@
   "topic": "/Haus/Meter/",
   "config": {
     "ip": "192.168.173.175",
-    "User": "***secret***",
-    "Pass": "***secret***",
+    "User": "admin",
+    "Pass": "DWH6-B710",
     "node_id": "1"
   }
 }
