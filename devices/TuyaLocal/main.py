@@ -11,24 +11,8 @@ logger = logging.getLogger()
 pretty()
 
 class device:
-  def __init__(self, config, topic, publisher):
+  def ini_tuyadev(self):
     tuya = {'OutletDevice': tinytuya.OutletDevice, 'CoverDevice': tinytuya.CoverDevice, 'BulbDevice': tinytuya.BulbDevice}
-    defauls = {'version': 3.3, 'timeout': 5, 'retry_limit': 5, 'retry_delay': 5,
-               'persist': False, 'cid': None, 'node_id': None, 'parent': None,
-               'interval': 10, 'latest': 300}
-    self.topic = topic
-    self.publisher = publisher
-    self.buffer = []
-    self.workerrunning = False
-    self.tryset = False
-    self.c = config
-    self.dps = {'online': False}
-    self.name_map = {}
-    for dp in self.c["dp_map"]:
-      self.name_map[self.c["dp_map"][dp][0]] = dp
-    for key in defauls:
-      if key not in config:
-        self.c[key] = defauls[key]
     self.tuya = tuya[self.c['devtype']](self.c['id'], self.c['ip'], self.c['localKey'],
                                         version=self.c['version'],
                                         connection_timeout=self.c['timeout'],
@@ -39,6 +23,27 @@ class device:
                                         node_id=self.c['node_id'],
                                         parent=self.c['parent']
                                         )
+    
+  def __init__(self, config, topic, publisher):
+    defauls = {'version': 3.3, 'timeout': 5, 'retry_limit': 5, 'retry_delay': 5,
+               'persist': False, 'cid': None, 'node_id': None, 'parent': None,
+               'interval': 10, 'latest': 300}
+    self.topic = topic
+    self.publisher = publisher
+    self.buffer = []
+    self.workerrunning = False
+    self.tryset = False
+    self.c = config
+    self.dps = {'online': False}
+    self.dpschanged = {}
+    self.name_map = {}
+    self.lastsendet = ''
+    for dp in self.c["dp_map"]:
+      self.name_map[self.c["dp_map"][dp][0]] = dp
+    for key in defauls:
+      if key not in config:
+        self.c[key] = defauls[key]
+    self.ini_tuyadev()
     self.gets = {}
     if self.c['devtype'] == 'OutletDevice':
       self.calls = {'dimmer': self.tuya.set_dimmer},
@@ -67,6 +72,47 @@ class device:
     
     logger.info("do init the device %s", d2s(config))
 
+  def publish_status(self, force = False, maxtime = False):
+    data = self.tuya.status()
+    if type(data) is dict and 'Err' in data and data['Err'] == "914":
+      self.ini_tuyadev()
+      sleep(1)
+      data = self.tuya.status()
+    ref = dumps(data)
+    if not self.tryset and (maxtime or (self.lastsendet != ref)) or force:
+      self.lastsendet = ref
+      logger.info("dps %s: %s", force, ref)
+      if (data is not None) and ('dps' in data):
+        for dp in data['dps']:
+          if dp in self.c["dp_map"]:
+            dpitem = self.c["dp_map"][dp]
+            if dpitem[2] is not None and not dpitem[1]:
+              if (type(dpitem[2]) == str) and ((dpitem[2] == "bool") or (dpitem[2] == "str") or (dpitem[2] == "enum")):
+                self.dps[dpitem[0]] = data['dps'][dp]
+              elif (type(dpitem[2]) == int) and (dpitem[2] > -1):
+                self.dps[dpitem[0]] = data['dps'][dp] * 10 ** dpitem[2]
+              elif (type(dpitem[2]) == int) and (dpitem[2] < 0):
+                scal = dpitem[2] * -1
+                self.dps[dpitem[0]] = round(data['dps'][dp] / 10 ** scal, scal)
+        for dp in self.c["dp_map"]:
+          if (dp in self.gets) and not self.c["dp_map"][dp][1] and (self.c["dp_map"][dp][2] is not None):
+            try:
+              temp = self.gets[dp]()
+              if type(temp) == dict:
+                for key in temp:
+                  self.dps[key] = temp[key]
+              else:
+                self.dps[self.c["dp_map"][dp][0]] = temp
+            except:
+              logger.warning("Can't get data from %s", dp)
+        self.dps['online'] = True
+      else:
+        self.dps['online'] = False
+        for lable in self.dpschanged:
+          self.dps[lable] = self.dpschanged[lable]
+      self.dpschanged = {}
+      self.publisher(self.topic, dumps(self.dps))
+
   def on_busy(self, topic, payload, retain):
     self.buffer.append({"topic": topic, "payload": payload, "retain": retain})
 
@@ -83,7 +129,8 @@ class device:
       logger.info("Received message for topic %s: %s", topic, payload)
       if retain==1:
         logger.info("This is a retained message")
-      if "set" in payload:
+      if '"set":' in payload:
+        self.dpschanged = {}
         data = loads(payload)["set"]
         for lable in data:
           if lable in self.name_map:
@@ -96,6 +143,7 @@ class device:
                   return
               self.tryset = True
               if lable in self.dps:
+                self.dpschanged[lable] = self.dps[lable]
                 self.dps[lable] = data[lable]
               if type(dpitem[2] ) == int:          
                 if dpitem[2] > 0:
@@ -108,8 +156,8 @@ class device:
                     return
                                         
               logger.info("Set property")
-              sleep(0.1)
-              self.publisher(self.topic, dumps(self.dps))
+              #sleep(0.1)
+              #self.publisher(self.topic, dumps(self.dps))
               if dp.isnumeric():
                 self.tuya.set_value(dp, data[lable])
               else:
@@ -131,10 +179,13 @@ class device:
                   elif len(value) == 2:
                     self.calls[dp](value[0], value[1])
                   elif len(value) == 3:
-                    self.calls[dp](value[0], value[1], value[2])  
+                    self.calls[dp](value[0], value[1], value[2])
+              self.lastsendet = ''              
               self.tryset = False
             else:
               logger.warning("Setting parameter %s is not alowed.", lable)
+        sleep(0.1)      
+        self.publish_status(True)
       if len(self.buffer) == 0:
         return
       
@@ -142,43 +193,17 @@ class device:
     logger.info("This is my worker %s", self.topic)
     next = now()
     lastsend = 0
-    lastsendet = ''
+    self.lastsendet = ''
     while (self.workerrunning):
       next += self.c["interval"]
       if not self.tryset:
-        data = self.tuya.status()
-        ref = dumps(data)
-        if not self.tryset and ((next - lastsend > self.c["latest"]) or (lastsendet != ref)):
-          lastsendet = ref
-          if (data is not None) and ('dps' in data):
-            lastsend = next
-            for dp in data['dps']:
-              dpitem = self.c["dp_map"][dp]
-              if dpitem[2] is not None and not dpitem[1]:
-                if (type(dpitem[2]) == str) and ((dpitem[2] == "bool") or (dpitem[2] == "str") or (dpitem[2] == "enum")):
-                  self.dps[dpitem[0]] = data['dps'][dp]
-                elif (type(dpitem[2]) == int) and (dpitem[2] > -1):
-                  self.dps[dpitem[0]] = data['dps'][dp] * 10 ** dpitem[2]
-                elif (type(dpitem[2]) == int) and (dpitem[2] < 0):
-                  scal = dpitem[2] * -1
-                  self.dps[dpitem[0]] = round(data['dps'][dp] / 10 ** scal, scal)
-            for dp in self.c["dp_map"]:
-              if (dp in self.gets) and not self.c["dp_map"][dp][1] and (self.c["dp_map"][dp][2] is not None):
-                try:
-                  temp = self.gets[dp]()
-                  if type(temp) == dict:
-                    for key in temp:
-                      self.dps[key] = temp[key]
-                  else:
-                    self.dps[self.c["dp_map"][dp][0]] = temp
-                except:
-                  logger.warning("Can't get data from %s", dp)
-            self.dps['online'] = True
-          else:
-            self.dps['online'] = False  
-          self.publisher(self.topic, dumps(self.dps))
+        self.publish_status(maxtime = next - lastsend > self.c["latest"])
+        #if self.dps['online']:
+        lastsend = next
       wait = next - now()
       if wait > 0:
-          sleep(wait)
+        sleep(wait)
+      else:
+        next = now() + self.c["interval"]
     logger.info("Stopping worker %s", self.topic)
     return True

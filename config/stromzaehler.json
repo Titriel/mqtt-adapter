@@ -1,14 +1,12 @@
 {
   "name": "stromzaehler",
-  "device": "ESPrestMeter",
-  "subscribe": "/Test/Meter/, 0",
-  "topic": "/Test/Meter/",
+  "device": "TibberLocal",
+  "subscribe": [["/Haus/Meter/", 0], ["/Haus/Meter/status/", 0]],
+  "topic": "/Haus/Meter/",
   "config": {
-    "ip": "192.168.173.163",
-    "token": "***secret@secret***",
-    "sseUser": "***secret***",
-    "ssePass": "***secret***",
-    "ssetimeout": 10,
-    "loopback": false
+    "ip": "192.168.173.175",
+    "User": "admin",
+    "Pass": "DWH6-B710",
+    "node_id": "1"
   }
 }
