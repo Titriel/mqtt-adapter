@@ -1,0 +1,14 @@
+**/__pycache__
+.gitignore
+.vscode
+.hypothesis
+.git
+devices.json
+snapshot.json
+tinytuya.json
+tuya-raw.json
+devicesorg.json
+myscan.py
+config/*.json
+devices/ESPrestMeter/*.json
+devices/ESPrestMeter/test*.py
