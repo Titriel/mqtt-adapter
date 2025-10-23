@@ -81,7 +81,7 @@ class device:
     ref = dumps(data)
     if not self.tryset and (maxtime or (self.lastsendet != ref)) or force:
       self.lastsendet = ref
-      logger.info("dps %s: %s", force, ref)
+      #logger.info("dps %s: %s", force, ref)
       if (data is not None) and ('dps' in data):
         for dp in data['dps']:
           if dp in self.c["dp_map"]:
