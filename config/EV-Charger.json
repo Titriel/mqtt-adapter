@@ -6,8 +6,8 @@
   "config": {
     "devtype": "OutletDevice",
     "ip": "192.168.173.200",
-    "id": "***secret***",
-    "localKey": "***secret***",
+    "id": "bfb9daaefe3803948cb9eu",
+    "localKey": "WCK#K1|ozyH8Bj^>",
     "version": 3.4,    
     "timeout": 3,
     "retry_limit": 2,

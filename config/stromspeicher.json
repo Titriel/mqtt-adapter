@@ -5,9 +5,9 @@
   "topic": "/Haus/Stromspeicher/",
   "config": {
     "ip": "192.168.173.193",
-    "token": "***secret@secret***",
-    "sseUser": "***secret***",
-    "ssePass": "***secret***",
+    "token": "admin@admin",
+    "sseUser": "admin",
+    "ssePass": "admin",
     "baud": 115200,
     "slaveadr": 1,
     "want": ["V_SET", "I_SET", "VOUT", "IOUT", "POWER", "UIN", "OUT_H", "OUT_M", "OUT_S", "T_IN", "T_EX", "LOCK", "CVCC", "ONOFF"],
