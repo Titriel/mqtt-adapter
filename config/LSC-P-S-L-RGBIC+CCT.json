@@ -6,8 +6,8 @@
   "config": {
     "devtype": "BulbDevice",
     "ip": "192.168.173.191",
-    "id": "bf66bd77e4eeddd515hkhh",
-    "localKey": "YIVquwW#.b<8<I1g",
+    "id": "***secret***",
+    "localKey": "***secret***",
     "version": 3.4,
     "timeout": 3,
     "retry_limit": 2,
