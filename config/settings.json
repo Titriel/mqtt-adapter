@@ -1,0 +1,14 @@
+{
+  "broker": {
+    "hostname": "192.168.173.10",
+    "port": 1883,
+    "username": "***secret***",
+    "password": "***secret***"
+  },
+  "clientname": "mqttadapter-dev",
+  "items": [
+    {
+      "name": "stromspeicher"
+    }       
+  ]
+}
