@@ -10,7 +10,7 @@ from typing import Any, Union
 from json import load
 from threading import Thread
 from time import sleep
-from config import config
+from config import config, secrets
 
 logger = logging.getLogger()
 pretty()
@@ -92,14 +92,16 @@ def on_message(client, userdata, message):
 internal = {"command": "", "worker": {}, "massageh": {}}
 while "clientname" not in internal:
   CONFIG = config()      
-
+  SECRETS = secrets()
   if "clientname" in CONFIG:
     internal["clientname"] = CONFIG["clientname"]
   else:
     internal["clientname"] = "clientadapter"
   client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, internal["clientname"])
   if "broker" in CONFIG:
-    if ("username" in CONFIG["broker"]) and ("password" in CONFIG["broker"]):
+    if ("username" in SECRETS["broker"]) and ("password" in SECRETS["broker"]):
+      client.username_pw_set(username=SECRETS["broker"]["username"], password=SECRETS["broker"]["password"])    
+    elif ("username" in CONFIG["broker"]) and ("password" in CONFIG["broker"]):
       client.username_pw_set(username=CONFIG["broker"]["username"], password=CONFIG["broker"]["password"])
 
     if "items" in CONFIG:
@@ -112,6 +114,16 @@ while "clientname" not in internal:
             if path.exists(tempfile):
               with open(tempfile,'r') as file:
                 item = load(file)
+        if item["name"] in SECRETS:
+          for key in SECRETS[item["name"]]:
+            if type(SECRETS[item["name"]][key]) is str:
+              item["config"][key] = SECRETS[item["name"]][key]
+            else:
+              tempitem = item["config"]
+              for jpath in SECRETS[item["name"]][key][0][:-1]:
+                tempitem = tempitem[jpath]
+              tempitem[SECRETS[item["name"]][key][0][-1]] = SECRETS[item["name"]][key][1]
+
         internal["items"][item["name"]] = import_device(item["device"]).device(item["config"], item["topic"], client.publish)
         subscribe = formatsc(item["subscribe"])
         internal["subscribe"] += [v for v in subscribe if v not in internal["subscribe"]]
